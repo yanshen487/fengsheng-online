@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>风声 · 联机版</title>
+<style>
+/* ============================================================
+   风声 —— 民国谍战题材桌游
+   整体风格：暗色底 + 宣纸米黄 + 绛红印章 + 鎏金边框，神秘谍战氛围
+   全部样式使用系统字体，无任何外部资源
+   ============================================================ */
+:root{
+  --bg:#15120e;
+  --bg2:#1d1913;
+  --ink:#2b2118;
+  --paper:#e9dcbf;
+  --paper2:#f4ead1;
+  --paper-dark:#d9c9a3;
+  --red:#9e2320;
+  --red-dark:#7c1a18;
+  --gold:#c9a14b;
+  --gold-light:#e0c37a;
+  --green:#2f4a3a;
+  --green-dark:#1f3328;
+  --blue:#2c5f8a;
+  --gray:#6d6d66;
+  --redblue-a:#b03a2e;
+  --redblue-b:#2c5f8a;
+  --text:#e6d9b8;
+  --muted:#a99a76;
+  --border:#c9a14b;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;}
+body{
+  font-family:"KaiTi","STKaiti","楷体","SimSun","宋体","Microsoft YaHei",serif;
+  background:
+    radial-gradient(1200px 700px at 50% -10%, rgba(201,161,75,.12), transparent 60%),
+    radial-gradient(900px 600px at 90% 110%, rgba(158,35,32,.14), transparent 55%),
+    linear-gradient(160deg,#1a1610 0%,#15120e 40%,#1d1811 100%);
+  color:var(--text);
+  min-height:100vh;
+  position:relative;
+  overflow-x:hidden;
+}
+/* 背景水印大字 */
+body::before{
+  content:"風";
+  position:fixed;
+  top:50%;left:50%;
+  transform:translate(-50%,-50%) rotate(-12deg);
+  font-size:44vmin;
+  font-family:"STKaiti","KaiTi","楷体",serif;
+  color:rgba(201,161,75,.045);
+  pointer-events:none;
+  z-index:0;
+  user-select:none;
+}
+#app{position:relative;z-index:1;max-width:1320px;margin:0 auto;padding:14px 16px 30px;}
+
+/* ---------- 顶部标题 ---------- */
+header.title{
+  text-align:center;
+  padding:10px 0 4px;
+  border-bottom:1px solid rgba(201,161,75,.35);
+  position:relative;
+}
+header.title h1{
+  font-size:52px;
+  letter-spacing:18px;
+  text-indent:18px;
+  color:var(--gold-light);
+  text-shadow:0 0 22px rgba(201,161,75,.45),0 2px 2px #000;
+  font-family:"STXingkai","Xingkai SC","STKaiti","KaiTi",serif;
+}
+header.title .sub{
+  color:var(--muted);
+  letter-spacing:6px;
+  font-size:13px;
+  margin-top:2px;
+}
+header.title .sub b{color:var(--gold);font-weight:normal;}
+.deck-status{
+  margin:8px auto 0;
+  display:flex;
+  gap:18px;
+  justify-content:center;
+  color:var(--muted);
+  font-size:14px;
+}
+
+/* ---------- 玩家区（圆桌） ---------- */
+#table{
+  display:grid;
+  grid-template-columns:1fr 1.25fr 1fr;
+  grid-template-areas:
+    "left top right"
+    "left bottom right";
+  gap:12px;
+  margin-top:14px;
+}
+.seat{position:relative;}
+.seat-top{grid-area:top;}
+.seat-left{grid-area:left;}
+.seat-right{grid-area:right;}
+.seat-bottom{grid-area:bottom;align-self:end;}
+
+/* ---------- 玩家面板 ---------- */
+.player{
+  background:linear-gradient(160deg,rgba(42,34,24,.92),rgba(28,22,15,.92));
+  border:1px solid rgba(201,161,75,.4);
+  border-radius:10px;
+  padding:10px 12px;
+  box-shadow:0 4px 18px rgba(0,0,0,.5), inset 0 0 0 1px rgba(0,0,0,.3);
+  position:relative;
+  min-height:150px;
+}
+.player.dead{opacity:.45;filter:grayscale(.8);}
+.player.dead::after{
+  content:"出 局";
+  position:absolute;inset:0;
+  display:flex;align-items:center;justify-content:center;
+  font-size:40px;letter-spacing:10px;
+  color:var(--red);
+  background:rgba(0,0,0,.35);
+  border-radius:10px;
+}
+.player.cur{
+  border-color:var(--gold-light);
+  box-shadow:0 0 0 2px rgba(224,195,122,.6),0 4px 22px rgba(0,0,0,.6);
+}
+.player .pname{
+  font-size:16px;color:var(--gold-light);
+  display:flex;align-items:center;gap:8px;
+  border-bottom:1px dashed rgba(201,161,75,.3);
+  padding-bottom:4px;margin-bottom:6px;
+}
+.player .pname .tag{
+  font-size:11px;color:var(--ink);
+  background:var(--gold);
+  border-radius:3px;padding:0 5px;
+}
+.player .pname .turnmark{
+  font-size:11px;color:var(--gold-light);
+  animation:blink 1.2s infinite;
+}
+@keyframes blink{50%{opacity:.3;}}
+.player .pinfo{font-size:12.5px;color:var(--muted);line-height:1.55;}
+.player .pinfo b{color:var(--paper);font-weight:normal;}
+.player .seal{
+  position:absolute;top:8px;right:8px;
+  width:34px;height:34px;border-radius:4px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:13px;color:#fff;letter-spacing:0;
+  transform:rotate(8deg);
+  box-shadow:0 1px 4px rgba(0,0,0,.5);
+  opacity:.9;
+  line-height:1.1;text-align:center;
+  font-weight:bold;
+}
+.seal.junqing{background:var(--blue);}
+.seal.qianfu{background:var(--red);}
+.seal.tegong{background:#5a3b8a;}
+.seal.hidden{background:#3a3327;color:var(--muted);font-size:12px;}
+
+/* ---------- 情报区 ---------- */
+.intel-area{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px;min-height:22px;}
+.intel-area .lbl{width:100%;font-size:11px;color:var(--muted);letter-spacing:2px;}
+.intel-slot{
+  width:40px;height:56px;border-radius:4px;
+  display:inline-flex;flex-direction:column;align-items:center;justify-content:center;
+  font-size:10px;color:#fff;position:relative;
+  border:1px solid rgba(0,0,0,.5);
+  box-shadow:0 1px 3px rgba(0,0,0,.5);
+}
+.intel-slot .m{font-size:8px;position:absolute;bottom:1px;left:0;right:0;text-align:center;color:rgba(255,255,255,.8);}
+
+/* ---------- 桌面中央：牌堆/弃牌堆/传递中的情报 ---------- */
+#center-table{
+  grid-column:1 / -1;
+  display:flex;align-items:center;justify-content:center;gap:30px;
+  padding:6px 0;
+}
+.pile{
+  text-align:center;
+}
+.pile .pile-card{
+  width:70px;height:98px;border-radius:6px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:22px;color:#fff;
+  box-shadow:0 3px 10px rgba(0,0,0,.6);
+  margin:0 auto 4px;
+  position:relative;
+}
+.pile.deck .pile-card{background:linear-gradient(150deg,#3a2f1e,#241c10);border:1px solid var(--gold);}
+.pile.deck .pile-card::after{content:"牌";position:absolute;font-size:11px;bottom:6px;color:var(--gold-light);}
+.pile.discard .pile-card{background:linear-gradient(150deg,#3a342c,#201c16);border:1px solid #6b5f46;}
+.pile .cnt{font-size:12px;color:var(--muted);}
+.pile .pname{font-size:12px;color:var(--gold);}
+#transit{
+  min-width:120px;text-align:center;
+}
+#transit .transit-card{
+  width:80px;height:112px;border-radius:6px;margin:0 auto 6px;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  font-size:12px;color:#fff;position:relative;
+  border:1px solid rgba(0,0,0,.6);
+  box-shadow:0 4px 16px rgba(0,0,0,.6);
+}
+#transit .transit-card.face-down{
+  background:repeating-linear-gradient(45deg,#2a2417,#2a2417 6px,#332b1c 6px,#332b1c 12px);
+  border:1px solid var(--gold);
+  color:var(--gold-light);
+}
+#transit .info{font-size:12px;color:var(--muted);line-height:1.5;}
+#transit .info b{color:var(--gold-light);}
+
+/* ---------- 手牌区（玩家） ---------- */
+#hand-wrap{
+  margin-top:14px;
+  background:linear-gradient(160deg,rgba(42,34,24,.9),rgba(26,21,14,.9));
+  border:1px solid rgba(201,161,75,.45);
+  border-radius:12px;
+  padding:12px 14px 14px;
+  box-shadow:0 6px 22px rgba(0,0,0,.55);
+}
+#hand-wrap h3{
+  font-size:14px;color:var(--gold-light);letter-spacing:4px;
+  display:flex;justify-content:space-between;align-items:center;
+}
+#hand-wrap h3 span{font-size:12px;color:var(--muted);letter-spacing:1px;}
+#hand{
+  display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;min-height:128px;
+  justify-content:center;
+}
+.card{
+  width:84px;height:120px;border-radius:7px;
+  position:relative;cursor:pointer;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  color:#fff;user-select:none;
+  border:1px solid rgba(0,0,0,.6);
+  box-shadow:0 2px 6px rgba(0,0,0,.5);
+  transition:transform .12s, box-shadow .12s, filter .12s;
+  padding:4px 2px;
+  text-align:center;
+}
+.card:hover{transform:translateY(-6px);box-shadow:0 8px 18px rgba(0,0,0,.6);}
+.card.selectable{box-shadow:0 0 0 3px var(--gold-light),0 6px 16px rgba(0,0,0,.6);}
+.card.dim{filter:brightness(.55);cursor:not-allowed;}
+.card.dim:hover{transform:none;box-shadow:none;}
+.card .cname{font-size:13px;font-weight:bold;line-height:1.2;margin-top:2px;}
+.card .csub{font-size:9px;opacity:.9;margin-top:3px;line-height:1.25;}
+.card .marks{position:absolute;top:3px;right:3px;display:flex;gap:2px;flex-direction:column;}
+.card .mk{font-size:9px;background:rgba(0,0,0,.4);border-radius:3px;padding:0 3px;line-height:1.4;}
+.card .mk.rot{color:#ffe08a;}
+.card .mk.lock{color:#ffb3b3;}
+.card .method-badge{
+  position:absolute;top:3px;left:3px;
+  font-size:9px;background:rgba(0,0,0,.45);border-radius:3px;padding:0 3px;
+}
+/* 颜色主题 */
+.card.red{background:linear-gradient(160deg,#c74a3a,#8c2219);}
+.card.blue{background:linear-gradient(160deg,#3f7fb3,#1d4a75);}
+.card.gray{background:linear-gradient(160deg,#8a8a82,#55554f);}
+.card.redblue{background:linear-gradient(135deg,#b03a2e 0%,#b03a2e 49%,#2c5f8a 51%,#2c5f8a 100%);}
+.intel-slot.red{background:linear-gradient(160deg,#c74a3a,#8c2219);}
+.intel-slot.blue{background:linear-gradient(160deg,#3f7fb3,#1d4a75);}
+.intel-slot.gray{background:linear-gradient(160deg,#8a8a82,#55554f);}
+.intel-slot.redblue{background:linear-gradient(135deg,#b03a2e 0%,#b03a2e 49%,#2c5f8a 51%,#2c5f8a 100%);}
+
+/* ---------- 桌面情报动画卡片（传递/截获/转移视觉） ---------- */
+.float-wrap{
+  position:fixed;z-index:45;pointer-events:none;
+  transform:translate(-50%,-50%);left:0;top:0;
+  transition:left .46s ease-in-out, top .46s ease-in-out;
+  will-change:left,top;
+}
+.float-card{
+  width:72px;height:100px;border-radius:7px;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  color:#fff;font-size:12px;font-weight:bold;text-align:center;
+  border:1px solid rgba(0,0,0,.6);
+  box-shadow:0 8px 22px rgba(0,0,0,.65);
+}
+.float-card.red{background:linear-gradient(160deg,#c74a3a,#8c2219);}
+.float-card.blue{background:linear-gradient(160deg,#3f7fb3,#1d4a75);}
+.float-card.gray{background:linear-gradient(160deg,#8a8a82,#55554f);}
+.float-card.redblue{background:linear-gradient(135deg,#b03a2e 0%,#b03a2e 49%,#2c5f8a 51%,#2c5f8a 100%);}
+.float-card.face-down{background:repeating-linear-gradient(45deg,#2a2417,#2a2417 6px,#332b1c 6px,#332b1c 12px);border:1px solid var(--gold);color:var(--gold-light);}
+
+/* ---------- 按钮 ---------- */
+.btn{
+  display:inline-block;
+  font-family:inherit;
+  font-size:13px;
+  padding:6px 14px;
+  margin:3px;
+  border-radius:5px;
+  cursor:pointer;
+  border:1px solid var(--gold);
+  background:linear-gradient(160deg,#4a3a22,#2f2412);
+  color:var(--gold-light);
+  transition:all .12s;
+  letter-spacing:1px;
+}
+.btn:hover{background:linear-gradient(160deg,#5a4830,#3a2c17);border-color:var(--gold-light);box-shadow:0 0 10px rgba(201,161,75,.4);}
+.btn:disabled{opacity:.4;cursor:not-allowed;}
+.btn.primary{background:linear-gradient(160deg,#9e2320,#6f1614);border-color:#d98a7a;color:#ffe9e6;}
+.btn.primary:hover{background:linear-gradient(160deg,#bb2c27,#8c1c19);}
+.btn.green{background:linear-gradient(160deg,#2f4a3a,#1f3328);border-color:#7ca88d;color:#dff0e5;}
+.btn.small{font-size:12px;padding:4px 9px;}
+.btn.danger{background:linear-gradient(160deg,#7c1a18,#4a0f0e);border-color:#c77;color:#ffe2e0;}
+
+/* 技能/动作交互键 与 顶部提示 */
+#action-bar{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);z-index:45;display:none;gap:12px;align-items:center;}
+#action-bar .btn{padding:10px 22px;font-size:15px;letter-spacing:3px;}
+#toast{position:fixed;top:66px;left:50%;transform:translateX(-50%);z-index:55;background:linear-gradient(160deg,rgba(32,26,18,.97),rgba(20,16,11,.97));border:1px solid var(--gold);border-radius:8px;padding:10px 20px;font-size:14px;color:#e9dcbf;box-shadow:0 6px 22px rgba(0,0,0,.55);display:none;max-width:82vw;text-align:center;letter-spacing:1px;line-height:1.5;}
+
+/* ---------- 弹窗 / 选择浮层 ---------- */
+#overlay{
+  position:fixed;inset:0;background:transparent;
+  display:none;align-items:center;justify-content:center;z-index:50;
+}
+#overlay.show{display:flex;}
+.dialog{
+  background:linear-gradient(160deg,#efe3c6,#e2d2ac);
+  color:var(--ink);
+  border:2px solid var(--gold);
+  border-radius:10px;
+  max-width:640px;width:92%;
+  max-height:82vh;overflow:auto;
+  padding:18px 20px;
+  box-shadow:0 10px 40px rgba(0,0,0,.7);
+}
+.dialog h2{
+  text-align:center;color:var(--red-dark);
+  letter-spacing:6px;font-size:22px;
+  border-bottom:1px solid rgba(158,35,32,.3);
+  padding-bottom:8px;margin-bottom:12px;
+  font-family:"STXingkai","Xingkai SC","STKaiti",serif;
+}
+.dialog .body{font-size:14px;line-height:1.7;}
+.dialog .opts{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-top:12px;}
+.dialog .opts .btn{color:#fff;}
+.opt-btn{
+  background:linear-gradient(160deg,#5a4a2a,#3a2f1a);
+  color:var(--gold-light);
+}
+.dialog .close{margin-top:14px;text-align:center;}
+
+/* ---------- 日志 ---------- */
+#log-wrap{
+  margin-top:14px;
+  background:linear-gradient(160deg,rgba(32,26,18,.92),rgba(20,16,11,.92));
+  border:1px solid rgba(201,161,75,.35);
+  border-radius:10px;
+  padding:10px 12px;
+}
+#log-wrap h3{
+  font-size:13px;color:var(--gold-light);letter-spacing:4px;margin-bottom:6px;
+  border-bottom:1px dashed rgba(201,161,75,.25);padding-bottom:4px;
+}
+#log{
+  max-height:190px;overflow-y:auto;
+  font-size:12.5px;line-height:1.7;color:#cfc2a4;
+  padding-right:6px;
+}
+#log .entry{border-bottom:1px dotted rgba(201,161,75,.15);}
+#log .entry b{color:var(--gold-light);font-weight:normal;}
+#log .entry.warn{color:#f0b8b0;}
+#log .entry.win{color:#ffe08a;}
+#log::-webkit-scrollbar{width:8px;}
+#log::-webkit-scrollbar-thumb{background:#4a3a22;border-radius:4px;}
+
+/* ---------- 技能提示 ---------- */
+#skillbar{margin-top:10px;display:flex;flex-wrap:wrap;gap:8px;justify-content:center;}
+.skill-chip{
+  font-size:11px;color:var(--muted);
+  background:rgba(201,161,75,.08);
+  border:1px solid rgba(201,161,75,.3);
+  border-radius:12px;padding:2px 10px;
+}
+.skill-chip b{color:var(--gold-light);font-weight:normal;}
+
+/* ---------- 胜负结果 ---------- */
+#result-overlay .dialog{text-align:center;}
+#result-overlay .big{
+  font-size:60px;font-family:"STXingkai","STKaiti",serif;
+  letter-spacing:10px;text-indent:10px;
+}
+#result-overlay .big.win{color:#9e2320;text-shadow:0 2px 6px rgba(158,35,32,.4);}
+#result-overlay .big.lose{color:#3a4a5a;text-shadow:0 2px 6px rgba(0,0,0,.3);}
+#result-overlay .reason{margin-top:8px;font-size:14px;color:#5a4a30;}
+
+/* 响应式 */
+@media(max-width:900px){
+  #table{grid-template-columns:1fr 1fr;}
+  .seat-left{grid-area:auto;}
+  .card{width:70px;height:102px;}
+}
+
+/* ================= 联机版新增样式 ================= */
+.room-status{margin-top:6px;display:flex;gap:18px;justify-content:center;color:var(--muted);font-size:13px;}
+.room-status b{color:var(--gold);font-weight:normal;}
+#lobby{position:fixed;inset:0;z-index:80;display:flex;align-items:center;justify-content:center;background:rgba(10,8,5,.88);}
+.lobby-panel{background:linear-gradient(160deg,rgba(42,34,24,.98),rgba(24,19,13,.98));border:2px solid var(--gold);border-radius:14px;padding:26px 30px;width:min(540px,92vw);box-shadow:0 14px 50px rgba(0,0,0,.75);max-height:92vh;overflow:auto;}
+.lobby-panel h1{text-align:center;color:var(--gold-light);font-size:34px;letter-spacing:10px;text-indent:10px;font-family:"STXingkai","Xingkai SC","STKaiti",serif;text-shadow:0 0 18px rgba(201,161,75,.4);}
+.lobby-sub{text-align:center;color:var(--muted);font-size:12.5px;margin:8px 0 18px;letter-spacing:1px;line-height:1.7;}
+.lobby-row{display:flex;gap:10px;margin:10px 0;justify-content:center;}
+.lobby-row input{flex:1;background:rgba(0,0,0,.35);border:1px solid rgba(201,161,75,.45);border-radius:6px;color:var(--paper);font-family:inherit;font-size:15px;padding:9px 12px;letter-spacing:2px;text-align:center;}
+.lobby-row input:focus{outline:none;border-color:var(--gold-light);box-shadow:0 0 8px rgba(201,161,75,.35);}
+.lobby-row input::placeholder{color:#6d6249;letter-spacing:1px;}
+.lobby-code{text-align:center;color:var(--muted);font-size:14px;margin:8px 0 14px;letter-spacing:2px;}
+.lobby-code b{color:var(--gold-light);font-size:30px;letter-spacing:8px;margin:0 8px;font-weight:normal;}
+#seat-list{border-top:1px dashed rgba(201,161,75,.3);border-bottom:1px dashed rgba(201,161,75,.3);padding:8px 2px;margin-bottom:12px;}
+.seat-row{display:flex;justify-content:space-between;align-items:center;font-size:14px;color:var(--paper);padding:6px 8px;border-radius:5px;}
+.seat-row.me{background:rgba(201,161,75,.13);}
+.seat-row .who{display:flex;gap:8px;align-items:center;}
+.seat-row .tag{font-size:11px;color:var(--ink);background:var(--gold);border-radius:3px;padding:0 5px;}
+.seat-row .tag.ai{background:#6d6d66;color:#e6d9b8;}
+.seat-row .tag.off{background:#5a4a2a;color:#cfc2a4;}
+.lobby-status{text-align:center;color:var(--muted);font-size:12.5px;line-height:1.7;margin-top:8px;min-height:18px;}
+.lobby-err{text-align:center;color:#f0b8b0;font-size:13px;margin-top:10px;min-height:18px;line-height:1.6;}
+#lobby .btn{padding:9px 18px;font-size:14px;}
+#btn-create,#btn-start{width:100%;letter-spacing:6px;font-size:16px;padding:11px 18px;}
+#ask-timer{position:fixed;top:16px;left:16px;z-index:70;display:none;background:rgba(20,16,11,.92);border:1px solid var(--gold);border-radius:20px;padding:6px 14px;color:var(--gold-light);font-size:13px;letter-spacing:1px;}
+.dialog .card-grid{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:12px;}
+.dialog .ply-grid{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:12px;}
+.dialog .ply-btn{min-width:120px;}
+.id-summary{font-size:12.5px;color:#3a2f1a;margin-top:12px;line-height:1.9;text-align:left;border-top:1px dashed rgba(158,35,32,.3);padding-top:8px;}
+.id-summary b{color:var(--red-dark);}
+</style>
+<body>
+<div id="app">
+
+  <!-- 标题 -->
+  <header class="title">
+    <h1>風 聲</h1>
+    <div class="sub">—— <b>谁是卧底</b> · 民国谍战版 · <b>联机对战</b> ——</div>
+    <div class="deck-status">
+      <span>阵营：军情 <b style="color:#c74a3a">×2</b> / 潜伏 <b style="color:#4f8a5f">×2</b> / 特工 <b style="color:#a78bd1">×1</b></span>
+      <span>情报颜色：<b style="color:#e07b6a">红</b> <b style="color:#6ea8d6">蓝</b> <b style="color:#b8b8b0">灰</b></span>
+      <span>传向：<b>逆时针</b></span>
+    </div>
+    <div class="room-status">
+      <span>房间 <b id="hdr-code">—</b></span>
+      <span>座位 <b id="hdr-seat">—</b></span>
+      <span id="hdr-state">未连接</span>
+    </div>
+  </header>
+
+  <!-- 圆桌 -->
+  <div id="table">
+    <div class="seat seat-left"  id="seat-3"></div>
+    <div class="seat seat-top"   id="seat-2"></div>
+    <div class="seat seat-right" id="seat-1"></div>
+    <div id="center-table">
+      <div class="pile deck"><div class="pile-card"></div><div class="cnt" id="deck-cnt">牌堆 0</div></div>
+      <div id="transit"></div>
+      <div class="pile discard"><div class="pile-card"></div><div class="cnt" id="discard-cnt">弃牌 0</div></div>
+    </div>
+    <div class="seat seat-bottom" id="seat-0"></div>
+  </div>
+
+  <!-- 玩家手牌 -->
+  <div id="hand-wrap">
+    <h3>你的手牌 <span id="hand-hint"></span></h3>
+    <div id="hand"></div>
+    <div id="skillbar"></div>
+    <div id="skillbar-actions" style="display:flex;justify-content:center;margin-top:8px;">
+      <button id="chengren-btn" class="btn primary" style="display:none;font-size:15px;padding:9px 18px;letter-spacing:4px;">成仁取义</button>
+    </div>
+  </div>
+
+  <!-- 日志 -->
+  <div id="log-wrap">
+    <h3>◆ 谍战日志 ◆</h3>
+    <div id="log"></div>
+  </div>
+</div>
+
+<!-- 宣胜按钮 -->
+<button id="declare-btn" class="btn primary" style="position:fixed;top:16px;right:16px;z-index:40;display:none;font-size:16px;padding:11px 20px;letter-spacing:6px;box-shadow:0 4px 18px rgba(158,35,32,.65);">宣 胜</button>
+
+<!-- 顶部提示 toast -->
+<div id="toast"></div>
+
+<!-- 暗杀交互键 -->
+<button id="ansha-btn" class="btn danger" style="position:fixed;top:76px;right:16px;z-index:40;display:none;font-size:15px;padding:9px 18px;letter-spacing:4px;">暗 杀</button>
+<button id="ansha-pass-btn" class="btn" style="position:fixed;top:76px;right:118px;z-index:40;display:none;font-size:14px;padding:9px 16px;letter-spacing:3px;">跳 过</button>
+
+<!-- 出牌阶段动作条 -->
+<div id="action-bar">
+  <button id="act-pass" class="btn green">结束出牌</button>
+</div>
+
+<!-- 询问倒计时 -->
+<div id="ask-timer">⏳</div>
+
+<!-- 通用弹窗 -->
+<div id="overlay"><div class="dialog" id="dialog"></div></div>
+
+<!-- 结果弹窗 -->
+<div id="overlay2" style="position:fixed;inset:0;background:rgba(10,8,5,.78);display:none;align-items:center;justify-content:center;z-index:60;">
+  <div class="dialog" id="result-dialog"></div>
+</div>
+
+<!-- 大厅 -->
+<div id="lobby">
+  <div class="lobby-panel">
+    <h1>風 聲 · 联机版</h1>
+    <div class="lobby-sub">四人谍战 · 空位由电脑补足 · 把房间号发给朋友即可开局</div>
+    <div id="lobby-home">
+      <div class="lobby-row"><input id="lobby-name" maxlength="12" placeholder="你的代号"></div>
+      <div class="lobby-row"><button id="btn-create" class="btn primary">创建房间</button></div>
+      <div class="lobby-row">
+        <input id="lobby-code" maxlength="4" inputmode="numeric" placeholder="四位房间号">
+        <button id="btn-join" class="btn">加入房间</button>
+      </div>
+    </div>
+    <div id="lobby-room" style="display:none">
+      <div class="lobby-code">房间号 <b id="room-code">----</b><button id="btn-copy" class="btn small">复制</button></div>
+      <div id="seat-list"></div>
+      <button id="btn-start" class="btn primary" style="display:none">开始游戏</button>
+      <div id="lobby-status"></div>
+      <div style="text-align:center"><button id="btn-leave" class="btn small" style="margin-top:10px">退出房间</button></div>
+    </div>
+    <div id="lobby-err"></div>
+  </div>
+</div>
+
+<script src="client.js"></script>
+</body>
+</html>

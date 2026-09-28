@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: fengsheng-online
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /ping
+    autoDeploy: true
+    envVars:
+      - key: NODE_VERSION
+        value: "20"

@@ -1,0 +1,17 @@
+{
+  "name": "fengsheng-online",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "风声 · 民国谍战桌游 联机版（服务器权威）",
+  "scripts": {
+    "start": "node server.js",
+    "smoke": "node smoke-test.mjs"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "ws": "^8.22.0"
+  }
+}
