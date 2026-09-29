@@ -558,8 +558,20 @@ $('btn-join').addEventListener('click', () => {
 });
 $('btn-start').addEventListener('click', () => send({ t: 'start' }));
 $('btn-leave').addEventListener('click', leaveRoom);
+// 本机/局域网地址发给别人打不开，只能本机访问；异地必须走公网隧道地址
+function isLocalHost(h) {
+  return /^(localhost|0\.0\.0\.0)$/.test(h) || /^127\./.test(h)
+    || /^10\./.test(h) || /^192\.168\./.test(h) || /^172\.(1[6-9]|2\d|3[01])\./.test(h);
+}
 $('btn-copy').addEventListener('click', () => {
-  const text = JOIN ? location.origin + '/?room=' + JOIN.code : '';
+  if (!JOIN) return;
+  if (isLocalHost(location.hostname)) {
+    toast('⚠ 你正在通过<b>本机/局域网</b>地址游玩，这个邀请链接朋友打不开。<br>'
+      + '异地联机请：① 双击桌面「风声·公网分享」，把窗口里的 <b>https://xxxx.trycloudflare.com</b> 地址发给朋友；'
+      + '② 让朋友打开后输入房间号 <b>' + JOIN.code + '</b>。', 9000);
+    return;
+  }
+  const text = location.origin + '/?room=' + JOIN.code;
   const done = () => toast(`已复制邀请链接：<br>${text}`, 3600);
   if (navigator.clipboard && navigator.clipboard.writeText) {
     navigator.clipboard.writeText(text).then(done, () => toast('复制失败，请手动分享房间号 ' + (JOIN ? JOIN.code : ''), 3600));

@@ -951,8 +951,12 @@ export function createEngine(io){
     if(zy){
       let use=false, target=null;
       if(p.isHuman){
-        const t=await selectPlayer(p, pp=>true, true);
-        if(t!==null){ use=true; target=t; }
+        use = (await showDialog(p, '转移', '你即将接受这份情报。是否使用【转移】将其转给其他玩家接受？',
+          [{label:'使用转移', value:'yes', cls:'primary'},{label:'不使用，继续接受', value:'no'}], 'no'))==='yes';
+        if(use){
+          const t=await selectPlayer(p, pp=>true, true);
+          if(t!==null) target=t; else use=false;
+        }
       } else {
         use = Math.random()<0.3; target = aiSelectPlayer(p, pp=>true);
       }
@@ -969,23 +973,25 @@ export function createEngine(io){
     }
 
     await sleep(380);
-    for(let i=0;i<G.players.length;i++){
-      const q=G.players[i];
-      if(q.id===acceptor || q.id===sender || q.dead) continue;
-      const dh=q.hand.find(c=>c.kind==='diaohu');
-      if(!dh) continue;
-      let use=false;
-      if(q.isHuman){
-        use = (await showDialog(q, '调虎离山', `<b>${p.name}</b> 正在接受情报。要用【调虎离山】取消其接受、让情报继续传吗？`,
-          [{label:'调虎离山！', value:'yes', cls:'primary'},{label:'不', value:'no'}], 'no'))==='yes';
-      } else {
-        use = knowsFaction(q, p) && p.faction!==q.faction && Math.random()<0.5;
-      }
-      if(use){
-        discardFromHand(q,dh);
-        log(`<b>${q.name}</b> 使用【调虎离山】，${p.name} 的接受被取消！`);
-        io.toast(`<b>${q.name}</b> 使用【调虎离山】，取消 ${p.name} 的接受`);
-        return {type:'cancel'};
+    if(acceptor!==sender){
+      for(let i=0;i<G.players.length;i++){
+        const q=G.players[i];
+        if(q.id===acceptor || q.id===sender || q.dead) continue;
+        const dh=q.hand.find(c=>c.kind==='diaohu');
+        if(!dh) continue;
+        let use=false;
+        if(q.isHuman){
+          use = (await showDialog(q, '调虎离山', `<b>${p.name}</b> 正在接受情报。要用【调虎离山】取消其接受、让情报继续传吗？`,
+            [{label:'调虎离山！', value:'yes', cls:'primary'},{label:'不', value:'no'}], 'no'))==='yes';
+        } else {
+          use = knowsFaction(q, p) && p.faction!==q.faction && Math.random()<0.5;
+        }
+        if(use){
+          discardFromHand(q,dh);
+          log(`<b>${q.name}</b> 使用【调虎离山】，${p.name} 的接受被取消！`);
+          io.toast(`<b>${q.name}</b> 使用【调虎离山】，取消 ${p.name} 的接受`);
+          return {type:'cancel'};
+        }
       }
     }
 
